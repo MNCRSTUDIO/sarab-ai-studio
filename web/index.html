@@ -1,0 +1,364 @@
+
+        <!-- Live Music Recommendation Box -->
+        
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="/logo.png"> <link rel="apple-touch-icon" href="/logo.png">
+<link rel="manifest" href="/manifest.json">
+<script>
+    window.sarabApiHeaders = function(extra) {
+        var token = document.getElementById('apiToken');
+        var value = token ? token.value.trim() : (sessionStorage.getItem('sarabApiToken') || '');
+        var headers = Object.assign({}, extra || {});
+        if (value) headers['Authorization'] = 'Bearer ' + value;
+        return headers;
+    };
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() { navigator.serviceWorker.register('/sw.js').catch(function() {}); });
+    }
+    // Universal Track Selection Handler
+    window.selectTrack = function(trackName) {
+        var inp = document.getElementById('onlineMusPrompt');
+        if (!inp) inp = document.querySelector('input[placeholder*="mood" i]');
+        if (inp) {
+            inp.value = trackName;
+        }
+        var box = document.getElementById('liveRecContainer');
+        if (box) {
+            box.innerHTML = '<div style="margin-top:8px;padding:8px 12px;background:#064e3b;border:1px solid #059669;border-radius:6px;color:#34d399;font-size:12px;font-weight:bold;">✓ Selected: ' + trackName + '</div>';
+        }
+    };
+
+    // Live Music Recommendation on Input
+    document.addEventListener('DOMContentLoaded', function() {
+        var onlineInput = document.getElementById('onlineMusPrompt') || document.querySelector('input[placeholder*="mood" i]');
+        var recContainer = document.getElementById('liveRecContainer');
+
+        if (onlineInput && recContainer) {
+            onlineInput.addEventListener('input', function(e) {
+                var query = (e.target.value || '').trim().replace(/['"\\]/g, '');
+                if (!query) {
+                    recContainer.innerHTML = '';
+                    return;
+                }
+
+                var track1 = 'Cinematic Ambient Match for ' + query;
+                var track2 = 'Upbeat Feel-Good Background Track';
+
+                recContainer.innerHTML = 
+                    '<div style="font-size:11px;color:#38bdf8;font-weight:bold;margin:8px 0 6px;">💡 Recommended Tracks (Tap to select):</div>' +
+                    '<button type="button" onclick="selectTrack(\'' + track1 + '\')" style="width:100%;text-align:left;background:#1e293b;border:1px solid #0284c7;border-radius:6px;padding:12px;font-size:13px;color:#ffffff;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation;">' +
+                        '<span style="pointer-events:none;">🎬 ' + track1 + '</span>' +
+                        '<span style="pointer-events:none;font-size:10px;background:#0284c7;color:#fff;padding:2px 8px;border-radius:4px;">Mood idea</span>' +
+                    '</button>' +
+                    '<button type="button" onclick="selectTrack(\'' + track2 + '\')" style="width:100%;text-align:left;background:#1e293b;border:1px solid #334155;border-radius:6px;padding:12px;font-size:13px;color:#ffffff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;-webkit-user-select:none;user-select:none;touch-action:manipulation;">' +
+                        '<span style="pointer-events:none;">✨ ' + track2 + '</span>' +
+                        '<span style="pointer-events:none;font-size:10px;background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;">Mood idea</span>' +
+                    '</button>';
+            });
+        }
+
+        // Create Video Button Handling
+        var createBtn = document.getElementById('btnCreate') || document.querySelector('button[onclick*="startGeneration"]');
+        if (createBtn) {
+            createBtn.onclick = function(e) {
+                e.preventDefault();
+                window.triggerCreateVideo();
+            };
+        }
+    });
+
+    // Main Video Generation Dispatcher to /api/v1/video/edit
+    window.triggerCreateVideo = function() {
+        var btn = document.getElementById('btnCreate') || document.querySelector('button[onclick*="startGeneration"]');
+        var card = document.getElementById('renderCard');
+        var status = document.getElementById('renderStatus');
+        var log = document.getElementById('jobLog');
+        var videoWrap = document.getElementById('videoWrap');
+        var player = document.getElementById('player');
+        var dlBtn = document.getElementById('dlBtn');
+        var musicInput = document.getElementById('onlineMusicPrompt') || document.getElementById('onlineMusPrompt');
+        var promptInput = document.getElementById('videoPrompt');
+        var durationInput = document.getElementById('duration');
+        var nameInput = document.getElementById('out_name');
+        var musicVal = musicInput ? musicInput.value.trim() : '';
+        var duration = durationInput ? Math.max(5, Math.min(600, Number(durationInput.value) || 35)) : 35;
+        var outputName = nameInput ? nameInput.value.trim() : 'SARAB_VIDEO.mp4';
+        var prompt = promptInput ? promptInput.value.trim() : '';
+
+        if (btn) { btn.disabled = true; btn.innerText = '⏳ Rendering video...'; }
+        if (card) card.style.display = 'block';
+        if (status) status.innerText = 'Video job is being queued...';
+        if (log) log.innerText = 'Preparing render request.';
+
+        fetch('/api/v1/video/edit', {
+            method: 'POST',
+            headers: window.sarabApiHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                online_music: musicVal,
+                music_name: (document.getElementById('musicFileSelect') || {}).value || '',
+                subtitle_name: (document.getElementById('subtitleFileSelect') || {}).value || '',
+                prompt: prompt,
+                out_name: outputName,
+                duration: duration,
+                format: (document.getElementById('format') || {}).value || '9:16'
+            })
+        })
+        .then(function(res) {
+            return res.json().then(function(data) {
+                if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+                return data;
+            });
+        })
+        .then(function(data) {
+            if (!data.job_id) throw new Error(data.error || 'Server did not return a render job ID.');
+            if (status) status.innerText = '⏳ Rendering...';
+            if (log) log.innerText = 'Job ID: ' + data.job_id;
+            var attempts = 0;
+            function poll() {
+                attempts += 1;
+                fetch('/api/v1/video/jobs/' + encodeURIComponent(data.job_id), {cache:'no-store', headers: window.sarabApiHeaders()})
+                .then(function(res) { if (!res.ok) throw new Error('Could not read render status.'); return res.json(); })
+                .then(function(job) {
+                    if (job.state === 'completed') {
+                        if (btn) { btn.disabled = false; btn.innerText = 'Create Video'; }
+                        if (status) status.innerText = '✅ Video rendered successfully!';
+                        var videoUrl = job.output || (job.file_name ? '/media/output/' + encodeURIComponent(job.file_name) : '');
+                        if (videoUrl) {
+                            if (videoWrap) videoWrap.style.display = 'block';
+                            fetch(videoUrl, {headers: window.sarabApiHeaders(), cache:'no-store'})
+                              .then(function(res) { if (!res.ok) throw new Error('Video download authorization failed.'); return res.blob(); })
+                              .then(function(blob) {
+                                if (window.sarabVideoObjectUrl) URL.revokeObjectURL(window.sarabVideoObjectUrl);
+                                var objectUrl = URL.createObjectURL(blob);
+                                window.sarabVideoObjectUrl = objectUrl;
+                                if (player) { player.src = objectUrl; player.load(); }
+                                if (dlBtn) { dlBtn.href = objectUrl; dlBtn.download = job.file_name || 'SARAB_VIDEO.mp4'; }
+                              })
+                              .catch(function(err) { if (log) log.innerText = err.message; });
+                        }
+                        if (log) log.innerText = 'Completed · ' + (job.file_name || 'Video ready');
+                    } else if (job.state === 'failed') {
+                        throw new Error(job.error || 'Video rendering failed.');
+                    } else if (attempts < 900) {
+                        if (status) status.innerText = '⏳ Rendering video... ' + (job.progress || 0) + '%';
+                        window.setTimeout(poll, 1500);
+                    } else {
+                        throw new Error('Render is taking too long. Check the job status later.');
+                    }
+                })
+                .catch(function(err) {
+                    if (btn) { btn.disabled = false; btn.innerText = 'Create Video'; }
+                    if (status) status.innerText = '❌ ' + err.message;
+                    if (log) log.innerText = err.message;
+                });
+            }
+            poll();
+        })
+        .catch(function(err) {
+            if (btn) { btn.disabled = false; btn.innerText = 'Create Video'; }
+            if (status) status.innerText = '❌ Generation request failed';
+            if (log) log.innerText = err.message;
+        });
+    };
+</script>
+
+<link rel="manifest" href="/manifest.json">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b0f19">
+  <meta name="description" content="SARAB AI STUDIO local photo slideshow video editor">
+  <title>SARAB AI STUDIO 7.0</title>
+  <style>
+    body { background: #0b0f19; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 16px; }
+    .header { background: linear-gradient(180deg, #1e1b4b 0%, #0b0f19 100%); margin: -16px -16px 16px -16px; padding: 20px 16px 12px; border-bottom: 1px solid #1e293b; }
+    .header h1 { font-size: 18px; font-weight: 700; margin: 0 0 4px 0; letter-spacing: 0.5px; }
+    .header p { font-size: 11px; color: #94a3b8; margin: 0; }
+    .badges-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+    .badge-card { background: #111827; border: 1px solid #1f293d; border-radius: 8px; padding: 8px 4px; text-align: center; font-size: 11px; font-weight: 600; }
+    .badge-card span { display: block; font-size: 11px; color: #10b981; margin-top: 2px; }
+    .card { background: #111827; border: 1px solid #1f293d; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .card-title { font-size: 14px; font-weight: 600; margin: 0 0 6px 0; }
+    .card-desc { font-size: 11px; color: #94a3b8; margin: 0 0 14px 0; line-height: 1.4; }
+    label { display: block; font-size: 11px; color: #94a3b8; margin: 10px 0 4px; }
+    input, select, textarea { width: 100%; box-sizing: border-box; background: #090d16; border: 1px solid #1f293d; border-radius: 6px; padding: 10px; color: #fff; font-size: 13px; }
+    textarea { resize: vertical; min-height: 60px; font-family: inherit; }
+    .btn-create { width: 100%; background: #4f46e5; color: #fff; border: none; border-radius: 6px; padding: 12px; font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 14px; }
+    .btn-green { background: #16a34a; color: #fff; border: none; border-radius: 6px; padding: 10px; font-weight: bold; cursor: pointer; flex: 1; }
+    .btn-gray { background: #1f2937; color: #fff; border: none; border-radius: 6px; padding: 10px; font-weight: bold; cursor: pointer; flex: 1; text-align: center; text-decoration: none; display: block; }
+    .btn-copy { background: #374151; color: #f3f4f6; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; margin-left: auto; }
+    pre { background: #090d16; border: 1px solid #1f293d; padding: 10px; font-size: 10px; color: #93c5fd; overflow-x: auto; max-height: 100px; }
+    video { width: 100%; border-radius: 6px; background: #000; margin-top: 10px; }
+    .meta-box { background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%); border: 1px solid #4338ca; border-radius: 10px; padding: 14px; margin-top: 16px; }
+    .meta-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .footer { text-align: center; font-size: 11px; color: #64748b; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1><div style="display:flex;align-items:center;justify-content:center;gap:12px;"><img src="/logo.png" style="width:48px;height:48px;border-radius:12px;border:2px solid #6366f1;object-fit:cover;box-shadow:0 0 10px rgba(99,102,241,0.5);"><span>SARAB AI STUDIO</span></div></h1>
+    <p>SARAB AI STUDIO 7.0 - Photo video rendering - Music sync - Preview & Download</p>
+  </div>
+
+  <div class="badges-row">
+    <div class="badge-card">API Server<span id="b-api">ONLINE</span></div>
+    <div class="badge-card">FFmpeg<span id="b-ff">ready</span></div>
+    <div class="badge-card">Input Photos<span id="b-ph">19 photos</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Video Editor</div>
+    <div class="card-desc">Photo slideshow renderer: selected duration is now followed exactly. Music loops or trims to match. Photos stay fully visible over blurred background.</div>
+
+    <div style="margin:10px 0;padding:12px;border:1px solid #334155;border-radius:8px;background:#0f172a;">
+      <label for="apiToken">API access token (only if configured on your server)</label>
+      <input id="apiToken" type="password" autocomplete="off" placeholder="Leave blank for local/no-token setup" style="width:100%;box-sizing:border-box;background:#1f2937;color:#fff;border:1px solid #475569;border-radius:6px;padding:9px;" oninput="sessionStorage.setItem('sarabApiToken',this.value)">
+      <label for="mediaFiles" style="margin-top:10px;">Upload photos, licensed music or SRT subtitles</label>
+      <input id="mediaFiles" type="file" multiple accept="image/jpeg,image/png,image/webp,audio/mpeg,audio/wav,audio/mp4,audio/aac,.ogg,.flac,.srt" style="width:100%;color:#cbd5e1;margin:6px 0;">
+      <button type="button" id="uploadMediaBtn" style="background:#334155;color:#fff;border:1px solid #64748b;border-radius:6px;padding:9px 12px;">Upload selected files</button>
+      <span id="uploadStatus" style="display:block;font-size:11px;color:#94a3b8;margin-top:6px;"></span>
+    </div>
+    <script>
+      async function refreshStudioStatus() {
+        try {
+          var response = await fetch('/api/v1/status', {headers:window.sarabApiHeaders(), cache:'no-store'});
+          var data = await response.json(); if (!response.ok) throw new Error(data.error || 'Status unavailable');
+          var api = document.getElementById('b-api'); if (api) api.textContent = 'ONLINE';
+          var ff = document.getElementById('b-ff'); if (ff) ff.textContent = data.video_engine && data.video_engine.status === 'ready' ? 'ready' : 'missing';
+          var photos = document.getElementById('b-ph'); if (photos) photos.textContent = (data.video_engine.images || 0) + ' photos';
+        } catch (err) {
+          var api = document.getElementById('b-api'); if (api) api.textContent = 'offline/auth';
+        }
+      }
+      async function refreshMusicLibrary() {
+        var select = document.getElementById('musicFileSelect'); if (!select) return;
+        try {
+          var response = await fetch('/api/v1/music', {headers:window.sarabApiHeaders(), cache:'no-store'});
+          var data = await response.json(); if (!response.ok) throw new Error(data.error || 'Music library unavailable');
+          var current = select.value; select.innerHTML = '<option value="">No background music</option>' + (data.items || []).map(function(track) {
+            var option = document.createElement('option'); option.value = track.name; option.textContent = track.name; return option.outerHTML;
+          }).join('');
+          if (Array.from(select.options).some(function(o){return o.value === current;})) select.value = current;
+        } catch (err) { console.warn('Music library:', err.message); }
+      }
+      async function refreshSubtitleLibrary() {
+        var select = document.getElementById('subtitleFileSelect'); if (!select) return;
+        try {
+          var response = await fetch('/api/v1/subtitles', {headers:window.sarabApiHeaders(), cache:'no-store'});
+          var data = await response.json(); if (!response.ok) throw new Error(data.error || 'Subtitle library unavailable');
+          var current = select.value; select.innerHTML = '<option value="">No subtitles</option>' + (data.items || []).map(function(track) {
+            var option = document.createElement('option'); option.value = track.name; option.textContent = track.name; return option.outerHTML;
+          }).join('');
+          if (Array.from(select.options).some(function(o){return o.value === current;})) select.value = current;
+        } catch (err) { console.warn('Subtitle library:', err.message); }
+      }
+      document.addEventListener('DOMContentLoaded', function() {
+        var tokenInput = document.getElementById('apiToken');
+        if (tokenInput) {
+          tokenInput.value = sessionStorage.getItem('sarabApiToken') || '';
+          tokenInput.addEventListener('change', function() { refreshStudioStatus(); refreshMusicLibrary(); refreshSubtitleLibrary(); });
+        }
+        refreshStudioStatus();
+        refreshMusicLibrary();
+        refreshSubtitleLibrary();
+        var uploadBtn = document.getElementById('uploadMediaBtn');
+        if (uploadBtn) uploadBtn.addEventListener('click', async function() {
+          var files = document.getElementById('mediaFiles').files;
+          var status = document.getElementById('uploadStatus');
+          if (!files || !files.length) { status.textContent = 'Select at least one photo, music file or SRT subtitle.'; return; }
+          var form = new FormData(); Array.from(files).forEach(function(file) { form.append('files', file, file.name); });
+          uploadBtn.disabled = true; status.textContent = 'Uploading...';
+          try {
+            var response = await fetch('/api/v1/media/upload', {method:'POST', headers:window.sarabApiHeaders(), body:form});
+            var data = await response.json(); if (!response.ok) throw new Error(data.error || 'Upload failed');
+            status.textContent = 'Uploaded: ' + data.uploaded.map(function(x){return x.name;}).join(', ');
+            refreshMusicLibrary();
+            refreshSubtitleLibrary();
+          } catch (err) { status.textContent = 'Upload error: ' + err.message; }
+          finally { uploadBtn.disabled = false; }
+        });
+      });
+    </script>
+
+    
+            <div style="background: #111827; border: 1px solid #374151; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                <label style="display: block; font-weight: 600; color: #a78bfa; margin-bottom: 6px;">✨ Video Topic / Story Prompt (informational only; upload photos to render)</label>
+                <textarea id="videoPrompt" rows="2" placeholder="E.g., High-energy Admission 2026-27 promo reel for MN Children's Rising School with vibrant bold hooks..." style="width: 100%; box-sizing: border-box; background: #1f2937; border: 1px solid #4b5563; border-radius: 6px; color: #fff; padding: 8px; font-size: 13px; resize: vertical;"></textarea>
+                
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+                    <button type="button" onclick="applyPreset('🏫 Admission 2026-27: Admissions Open for Nursery to 8th Class with Modern Facilities!')" style="background: #374151; color: #e5e7eb; border: 1px solid #4b5563; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer;">🏫 Admissions Open</button>
+                    <button type="button" onclick="applyPreset('📚 Academic Excellence: Interactive Learning & Dedicated Faculty at MN Children's Rising School.')" style="background: #374151; color: #e5e7eb; border: 1px solid #4b5563; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer;">📚 Academic Showcase</button>
+                    <button type="button" onclick="applyPreset('🎉 Vibrant Campus: Sports, Activity & Playful Environment for Young Achievers!')" style="background: #374151; color: #e5e7eb; border: 1px solid #4b5563; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer;">🎉 Activities & Sports</button>
+                </div>
+            </div>
+<label>Output filename</label>
+    <input type="text" id="out_name" value="MNCR_SCHOOL_FINAL.mp4">
+
+    <label>Format</label>
+    <select id="format"><option>Vertical 9:16 (Reels/Shorts)</option><option>Landscape 16:9 (YouTube)</option></select>
+
+    <label>Duration (5-600 seconds; music will be trimmed/looped to match)</label>
+    <input type="number" id="duration" value="35">
+
+    
+        <!-- AI Smart Music Recommendation Component -->
+        <div style="background:#111827;border:1.5px solid #38bdf8;border-radius:10px;padding:12px;margin:14px 0;">
+            <label style="display:block;font-weight:700;color:#38bdf8;margin-bottom:6px;font-size:13px;">🎧 Music Mood Suggestions + Local Audio Library</label>
+            <input type="text" id="onlineMusicPrompt" placeholder="Mood likhein (romantic, calm, energetic) — optional" oninput="showLiveRecs(this.value)" style="width:100%;box-sizing:border-box;background:#1f2937;border:1px solid #4b5563;border-radius:6px;color:#fff;padding:10px;font-size:13px;" />
+            <label for="musicFileSelect" style="margin-top:8px;">Choose an uploaded local music file</label>
+            <select id="musicFileSelect" style="width:100%;box-sizing:border-box;background:#1f2937;border:1px solid #4b5563;border-radius:6px;color:#fff;padding:9px;"><option value="">No background music</option></select>
+            <label for="subtitleFileSelect" style="margin-top:8px;">Optional SRT subtitle track</label>
+            <select id="subtitleFileSelect" style="width:100%;box-sizing:border-box;background:#1f2937;border:1px solid #4b5563;border-radius:6px;color:#fff;padding:9px;"><option value="">No subtitles</option></select>
+            <div id="liveRecContainer" style="margin-top:8px;display:flex;flex-direction:column;gap:5px;"></div>
+        </div>
+
+        <script>
+        function applyPreset(text) {
+          var field = document.getElementById('videoPrompt');
+          if (field) field.value = text;
+        }
+        function applySelectedMusic(text) {
+          var field = document.getElementById('onlineMusicPrompt');
+          if (field) field.value = text;
+          var note = document.getElementById('musicMoodNote');
+          if (note) note.textContent = 'Mood suggestion only. Select an actual uploaded audio file above to add music.';
+        }
+        function showLiveRecs(value) {
+          var box = document.getElementById('liveRecContainer');
+          if (!box) return;
+          box.replaceChildren();
+          var val = String(value || '').trim();
+          if (val.length < 2) return;
+          var title = document.createElement('div');
+          title.textContent = 'Mood ideas (not audio downloads):';
+          title.style.cssText = 'font-size:11px;color:#38bdf8;font-weight:bold;margin:6px 0;';
+          box.appendChild(title);
+          [ 'Cinematic ambient', 'Upbeat feel-good' ].forEach(function(label) {
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = label + ' mood';
+            button.style.cssText = 'width:100%;text-align:left;background:#1e293b;border:1px solid #334155;border-radius:6px;padding:9px 12px;color:#fff;margin-bottom:5px;';
+            button.addEventListener('click', function() { applySelectedMusic(label + ' ' + val); });
+            box.appendChild(button);
+          });
+        }
+        </script>
+        <div id="musicMoodNote" style="font-size:10px;color:#94a3b8;margin:4px 0;">Mood ideas do not download music. Upload/select an audio file you own or are licensed to use.</div>
+
+        <button type="button" id="btnCreate" class="btn-create">Create Video</button>
+
+        <div id="renderCard" class="card" style="display:none;margin-top:16px;">
+          <div class="card-title">Render Status</div>
+          <div id="renderStatus" style="font-size:13px;color:#cbd5e1;margin:8px 0;">Waiting...</div>
+          <pre id="jobLog"></pre>
+          <div id="videoWrap" style="display:none;">
+            <video id="player" controls playsinline></video>
+            <a id="dlBtn" class="btn-gray" href="#" download="SARAB_VIDEO.mp4">Download MP4</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer">SARAB AI STUDIO 7.0 · Local media rendering · Use licensed media only</div>
+</body>
+</html>

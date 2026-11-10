@@ -1,0 +1,3 @@
+SARAB AI STUDIO 7.0 – CONSOLIDATED RELEASE NOTES
+
+This release supersedes the old phase-specific patch workflow. Use install_termux.sh for Termux and the Dockerfile for container deployment. The API and video editor now share one project-relative renderer. Review README.md and FINAL-TEST-REPORT.md for capabilities and verified checks.

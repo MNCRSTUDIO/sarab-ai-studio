@@ -1,0 +1,20 @@
+SARAB AI STUDIO 7.0 – TERMUX INSTALLATION (HINDI)
+
+1. ZIP ko Termux ke accessible folder mein extract karein.
+2. Termux mein project folder kholein.
+3. Ye command chalayein:
+   bash install_termux.sh
+4. Installation ke baad server start karein:
+   bash start.sh
+5. Android browser mein kholein:
+   http://127.0.0.1:7860
+6. Studio ke Upload panel se photos aur apni licensed MP3/WAV file upload karein.
+7. Music dropdown se audio choose karein, duration aur format set karein, phir Create Video dabayein.
+8. Render complete hone par preview aur Download MP4 use karein.
+
+IMPORTANT:
+- FFmpeg aur FFprobe install hone chahiye; installer ye package install karta hai.
+- Sirf wahi music/media use karein jiske rights aapke paas hain.
+- Public Render deployment se pehle SARAB_API_TOKEN environment variable set karein.
+- Render filesystem persistent nahi hota jab tak persistent disk configure na ho.
+- Ye version 720p, 12 FPS photo slideshow renderer hai; full professional multi-track NLE, AI image generation, native APK aur real social publishing is build mein included nahi hain.

@@ -1,0 +1,12 @@
+SARAB AI STUDIO 7.0 – START HERE
+
+Termux:
+  1. Extract this ZIP.
+  2. Open the extracted folder in Termux.
+  3. Run: bash install_termux.sh
+  4. Run: bash start.sh
+  5. Open: http://127.0.0.1:7860
+
+Before public Render deployment, set SARAB_API_TOKEN in Render Environment.
+Read README.md, INSTALL-HINDI.txt, SECURITY.md, and FINAL-TEST-REPORT.md.
+This is a consolidated tested maintenance release, not a complete generative-AI/NLE/social-publishing product. Known feature boundaries are documented in README.md.

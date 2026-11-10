@@ -1,0 +1,12 @@
+SARAB AI STUDIO 7.0 – CONSOLIDATED BUILD
+Build date: 2026-11-10
+Baseline: uploaded sarab-ai-studio-v7-zero-cost.zip + maintenance build review
+Primary renderer: backend/video_engine/editor.py
+Default output profile: 720p, 12 fps, H.264/AAC
+Verification: see FINAL-TEST-REPORT.md
+Security: see SECURITY.md
+Installation: bash install_termux.sh (Termux) or Dockerfile (container)
+Live Render deployment: NOT performed
+Native APK: NOT included
+AI image generation: NOT included
+Social publishing: NOT implemented (queue metadata only)
