@@ -79,3 +79,35 @@ class AIPlanner:
             "-c:a", "aac", "-b:a", "128k", target_out
         ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return target_out
+
+
+def create_video_plan(prompt, platform="instagram", duration=30):
+    prompt = str(prompt or "").strip()
+    if not prompt:
+        raise ValueError("A video prompt is required")
+
+    try:
+        duration = max(5, min(int(duration), 300))
+    except (TypeError, ValueError):
+        duration = 30
+
+    platform = str(platform or "instagram").lower().strip()
+    vertical_platforms = ("instagram", "reels", "youtube_shorts", "shorts", "tiktok")
+
+    if platform in vertical_platforms:
+        fmt = "9:16 vertical"
+    else:
+        fmt = "16:9 horizontal"
+
+    return {
+        "prompt": prompt,
+        "platform": platform,
+        "duration": duration,
+        "format": fmt,
+        "generated_by": "local rule-based planner (not generative AI)",
+        "scenes": [
+            {"scene": 1, "description": "Opening shot: " + prompt},
+            {"scene": 2, "description": "Main subject and story: " + prompt},
+            {"scene": 3, "description": "Closing shot and call to action: " + prompt}
+        ]
+    }

@@ -21,6 +21,14 @@ planner = AIPlanner(ROOT)
 lock = threading.Lock()
 
 
+def _safe_filename(name):
+    name = str(name or "")
+    name = name.replace("\\", "/").split("/")[-1]
+    name = name.strip()
+    if name in ("", ".", ".."):
+        return "output"
+    return name
+
 def jobs():
     try:
         with open(JOBS_DB, encoding="utf-8") as f:
