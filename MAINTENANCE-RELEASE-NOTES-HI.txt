@@ -1,0 +1,33 @@
+SARAB AI STUDIO — MAINTENANCE BUILD
+==================================
+
+इस build में source ZIP के आधार पर ये सुधार किए गए हैं:
+1. Music और subtitle API अब frontend के अपेक्षित `items: [{name}]` format के साथ compatible है.
+2. Generated MP4 download अब उसी private bearer-token से सुरक्षित है.
+3. खाली prompt पर पहले local uploaded photos render होते हैं; अनावश्यक external image request नहीं होती.
+4. चुनी हुई SRT file को FFmpeg subtitles filter से video में burn-in करने का support जोड़ा गया है.
+5. Existing output filename overwrite नहीं होगा; नया unique filename बनेगा.
+6. Server startup अब access token को console/log में नहीं छापता.
+7. start.sh अब सभी Python processes को kill नहीं करता; केवल server PID manage करता है.
+
+सीमाएँ:
+- यह PWA/browser app है, native APK नहीं.
+- Photo slideshow + music + optional SRT captions उपलब्ध हैं.
+- Prompt-based image generation third-party service पर निर्भर है और guaranteed नहीं.
+- वास्तविक AI text/image-to-video model इस source में bundled नहीं है.
+- Social media publishing/OAuth लागू नहीं है; manual upload ही करें.
+- Token-based private access है; अलग username/password account system नहीं.
+- Public internet पर सीधे expose न करें; HTTPS और hosting-side secret configuration आवश्यक है.
+
+Termux:
+  bash install_termux.sh
+  bash start.sh
+
+Token पढ़ने के लिए (केवल अपने फोन पर):
+  cat media/.access_token
+
+Server log:
+  tail -n 50 logs/server.log
+
+Server रोकने के लिए:
+  kill "$(cat logs/server.pid)"

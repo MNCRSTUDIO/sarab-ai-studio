@@ -1,11 +1,9 @@
 import os, time, subprocess, urllib.request, urllib.parse, re, glob
 
-STREAM_AUDIO = {
-    "lofi": "https://ia801503.us.archive.org/15/items/chill-lofi-song/Chill%20Lofi%20Song.mp3",
-    "cinematic": "https://ia800109.us.archive.org/33/items/ambient-relaxing-music/Ambient%20Music.mp3",
-    "upbeat": "https://ia600109.us.archive.org/33/items/ambient-relaxing-music/Upbeat%20Funk.mp3",
-    "acoustic": "https://ia801503.us.archive.org/15/items/chill-lofi-song/Acoustic%20Guitar.mp3"
-}
+# Free-plan, privacy-first audio policy: never scrape or stream third-party tracks.
+# Users can add music they own or are licensed to use in media/music.
+STREAM_AUDIO = {}
+
 
 class AIPlanner:
     def __init__(self, root_dir):
@@ -44,41 +42,32 @@ class AIPlanner:
                 pass
 
         if not frames:
-            for p in [os.path.join(self.root, "media", "photos"), "/sdcard/Pictures"]:
+            for p in [os.path.join(self.root, "media", "input"), os.path.join(self.root, "media", "photos"), "/sdcard/Pictures"]:
                 if os.path.exists(p):
-                    frames.extend(glob.glob(os.path.join(p, "*.jpg")))
+                    frames.extend(glob.glob(os.path.join(p, "*.jpg")) + glob.glob(os.path.join(p, "*.jpeg")) + glob.glob(os.path.join(p, "*.png")) + glob.glob(os.path.join(p, "*.webp")))
         return frames
 
     def resolve_audio(self, choice, duration, target_out):
-        key = str(choice).lower().strip().replace("custom:", "")
-        for k, url in STREAM_AUDIO.items():
-            if k in key:
-                try:
-                    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-                    with urllib.request.urlopen(req, timeout=12) as resp, open(target_out, "wb") as f:
-                        f.write(resp.read())
-                    p = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", target_out], stdout=subprocess.PIPE)
-                    if p.returncode == 0 and os.path.getsize(target_out) > 5000:
-                        return target_out
-                except Exception:
-                    pass
-
-        for loc in [os.path.join(self.root, "media", "music"), "/sdcard/Music", "/sdcard/Download"]:
-            if os.path.exists(loc):
-                for ext in ("*.mp3", "*.m4a", "*.wav", "*.aac"):
-                    for m in glob.glob(os.path.join(loc, ext)):
-                        if key and key in os.path.basename(m).lower():
-                            return m
-                        if not key:
-                            return m
-
-        subprocess.run([
-            "ffmpeg", "-y", "-f", "lavfi",
-            "-i", f"sine=frequency=261.63:duration={duration}",
-            "-af", "volume=0.32,chorus=0.7:0.9:55:0.4:0.25:2",
-            "-c:a", "aac", "-b:a", "128k", target_out
+        """Use only a matching local, user-supplied track; otherwise create silence."""
+        key = str(choice or "").strip().lower()
+        search_dirs = [os.path.join(self.root, "media", "music"), "/sdcard/Music", "/sdcard/Download"]
+        audio_exts = ("*.mp3", "*.m4a", "*.wav", "*.aac", "*.ogg", "*.flac")
+        for loc in search_dirs:
+            if not os.path.isdir(loc):
+                continue
+            for pattern in audio_exts:
+                for path in sorted(glob.glob(os.path.join(loc, pattern))):
+                    if key and key not in os.path.basename(path).lower():
+                        continue
+                    return path
+        # No music selected/found: produce a silent AAC track, not an artificial tone.
+        os.makedirs(os.path.dirname(target_out) or ".", exist_ok=True)
+        result = subprocess.run([
+            "ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+            "-t", str(max(1, int(duration))), "-c:a", "aac", "-b:a", "96k", target_out
         ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return target_out
+        return target_out if result.returncode == 0 and os.path.isfile(target_out) else None
+
 
 
 def create_video_plan(prompt, platform="instagram", duration=30):

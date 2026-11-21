@@ -7,7 +7,7 @@ This release consolidates the supplied V7 and maintenance sources around one API
 - One shared renderer: `backend/video_engine/editor.py`, called by `/api/v1/video/edit`.
 - Render duration validation (5–600 seconds), unique output naming, progress tracking, and persistent job records under `logs/jobs/`.
 - 720p vertical (720×1280) or landscape (1280×720) output at 12 fps, H.264/AAC, with blurred background fill and local music loop/trim.
-- Browser upload for photos, local music, and SRT subtitle files.
+- Browser upload for photos, local music, and SRT subtitle files; optional SRT burn-in during rendering.
 - Upload type/size limits, sanitized filenames, API rate limiting, optional bearer-token authentication, and security response headers.
 - Correct 404 for unknown jobs; generated output only is served from `/media/output/`.
 - `PORT` support for Render and project-relative storage paths for Docker/Termux.
@@ -49,7 +49,7 @@ Before public exposure, configure `SARAB_API_TOKEN` in the hosting provider's en
 - Image generation is not implemented as a reliable first-party service in this source package.
 - Social publishing is not implemented. The current social uploader only queues jobs; real YouTube/Instagram/Facebook publishing requires platform OAuth, permissions, app review, and account configuration.
 - The project does not build a native Android APK. It is a browser/PWA application.
-- Music recommendations in the interface are suggestions, not licensed audio files. Upload audio you own or are licensed to use. The renderer uses local music files only and does not scrape YouTube or download arbitrary songs.
+- Music recommendations in the interface are suggestions, not licensed audio files. Upload audio you own or are licensed to use. The renderer uses uploaded/local music files or a generated tone fallback; it does not scrape YouTube or download arbitrary songs.
 - The renderer is a low-resource 720p / 12 fps slideshow pipeline, not a 1080p/4K multi-track professional NLE.
 - In-memory rate limiting is per process; this is not a substitute for a reverse proxy/WAF or a persistent multi-worker job queue.
 - Render's ephemeral filesystem may be reset on redeploy/restart unless a persistent disk is configured. Configure persistent storage before relying on long-term media/job retention.

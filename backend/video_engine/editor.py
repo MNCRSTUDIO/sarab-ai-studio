@@ -37,7 +37,7 @@ class VideoEditorEngine:
     def __init__(self, root_dir):
         self.root = root_dir
 
-    def compile(self, scenes, duration, fmt, audio_path, output_path, job_id):
+    def compile(self, scenes, duration, fmt, audio_path, output_path, job_id, subtitle_path=None):
         if not scenes:
             raise ValueError("No scenes supplied")
         if not audio_path or not os.path.isfile(audio_path):
@@ -90,14 +90,21 @@ class VideoEditorEngine:
             raise RuntimeError("Concat failed: " + r.stderr[-1000:])
 
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-        cmd = [
-            "ffmpeg", "-y", "-i", silent,
-            "-stream_loop", "-1", "-i", os.path.abspath(audio_path),
-            "-map", "0:v:0", "-map", "1:a:0",
-            "-c:v", "copy", "-c:a", "aac", "-b:a", "128k",
-            "-ar", "44100", "-t", str(duration),
-            "-movflags", "+faststart", os.path.abspath(output_path)
-        ]
+        cmd = ["ffmpeg", "-y", "-i", silent,
+               "-stream_loop", "-1", "-i", os.path.abspath(audio_path)]
+        if subtitle_path:
+            if not os.path.isfile(subtitle_path) or not subtitle_path.lower().endswith(".srt"):
+                raise FileNotFoundError("Selected SRT subtitle file was not found.")
+            # Escape characters meaningful to FFmpeg's filter parser.
+            sub = os.path.abspath(subtitle_path).replace("\\\\", "\\\\\\\\").replace(":", "\\\\:").replace("'", "\\\\'").replace(",", "\\\\,").replace("[", "\\\\[").replace("]", "\\\\]")
+            cmd += ["-vf", "subtitles='" + sub + "':force_style='FontSize=22,Outline=2,Shadow=1,MarginV=40'"]
+            cmd += ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"]
+        else:
+            cmd += ["-c:v", "copy"]
+        cmd += ["-map", "0:v:0", "-map", "1:a:0",
+                "-c:a", "aac", "-b:a", "128k", "-ar", "44100",
+                "-t", str(duration), "-movflags", "+faststart",
+                os.path.abspath(output_path)]
         r = subprocess.run(cmd, capture_output=True, text=True)
         if r.returncode != 0:
             raise RuntimeError("Audio mux failed: " + r.stderr[-1000:])
