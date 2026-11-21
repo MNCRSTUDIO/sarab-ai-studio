@@ -15,9 +15,9 @@ run(["git", "clone", "https://github.com/deepbeepmeep/Wan2GP.git", "/kaggle/work
 run(["uv", "venv", "--python", "3.11", "/kaggle/working/wanenv"])
 py = "/kaggle/working/wanenv/bin/python"
 
-run(["uv", "pip", "install", "--python", py, "torch==2.10.0", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu130"])
+run(["uv", "pip", "install", "--python", py, "torch==2.10.0", "torchvision", "torchaudio==2.10.0", "--index-url", "https://download.pytorch.org/whl/cu130"])
 run(["uv", "pip", "install", "--python", py, "-r", "/kaggle/working/Wan2GP/requirements.txt"])
-run(["uv", "pip", "install", "--python", py, "torch==2.10.0", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu130"])
+run(["uv", "pip", "install", "--python", py, "torch==2.10.0", "torchvision", "torchaudio==2.10.0", "--index-url", "https://download.pytorch.org/whl/cu130"])
 
 run(["uv", "pip", "install", "--python", py, "packaging"])
 
