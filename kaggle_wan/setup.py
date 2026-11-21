@@ -31,5 +31,6 @@ run([py, "-c", "import torch; print('Torch:',torch.__version__); print('CUDA:',t
 run([py, "-c", "import os; p=\x27/kaggle/working/Wan2GP\x27; print(\x27Wan2GP folder:\x27, os.path.isdir(p)); print(\x27Launcher:\x27, os.path.isfile(p+\x27/wgp.py\x27)); print(\x27Files:\x27, os.listdir(p)[:30] if os.path.isdir(p) else \x27NOT FOUND\x27)"])
 run(["uv", "pip", "install", "--python", py, "setuptools"])
 run(["uv", "pip", "install", "--python", py, "tokenizers==0.21.4"])
+run(["uv", "pip", "install", "--python", py, "cffi", "Pillow", "soundfile"])
 run([py, "/kaggle/working/Wan2GP/wgp.py", "--help"], timeout=120)
 print("========== SARAB SETUP COMPLETE ==========", flush=True)
