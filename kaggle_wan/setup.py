@@ -33,5 +33,6 @@ run([py, "-c", "import os; p=\x27/kaggle/working/Wan2GP\x27; print(\x27Wan2GP fo
 run(["uv", "pip", "install", "--python", py, "setuptools"])
 run(["uv", "pip", "install", "--python", py, "tokenizers==0.21.4"])
 run(["uv", "pip", "install", "--python", py, "cffi", "Pillow", "soundfile"])
-run([py, "/kaggle/working/Wan2GP/wgp.py", "--share", "--profile", "5"], timeout=43200)
+os.chdir("/kaggle/working/Wan2GP")
+run([py, "wgp.py", "--share", "--profile", "5"], timeout=43200)
 print("========== SARAB SETUP COMPLETE ==========", flush=True)
