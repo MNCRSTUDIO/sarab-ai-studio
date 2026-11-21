@@ -28,4 +28,5 @@ print("========== IMPORT TEST ==========", flush=True)
 run(["uv", "pip", "install", "--python", py, "gradio"])
 run([py, "-c", "import torch; print('Torch:',torch.__version__); print('CUDA:',torch.cuda.is_available()); import diffusers,gradio; print('Diffusers:',diffusers.__version__); print('Gradio:',gradio.__version__)"])
 
+run([py, "-c", "import os; p=\x27/kaggle/working/Wan2GP\x27; print(\x27Wan2GP folder:\x27, os.path.isdir(p)); print(\x27Launcher:\x27, os.path.isfile(p+\x27/wgp.py\x27)); print(\x27Files:\x27, os.listdir(p)[:30] if os.path.isdir(p) else \x27NOT FOUND\x27)"])
 print("========== SARAB SETUP COMPLETE ==========", flush=True)
