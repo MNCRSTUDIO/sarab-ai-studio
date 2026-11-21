@@ -16,7 +16,8 @@ run(["uv", "venv", "--python", "3.11", "/kaggle/working/wanenv"])
 py = "/kaggle/working/wanenv/bin/python"
 
 run(["uv", "pip", "install", "--python", py, "torch==2.10.0", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu130"])
-run(["uv", "pip", "install", "--python", py, "-r", "/kaggle/working/Wan2GP/requirements.txt", "--no-deps"])
+run(["uv", "pip", "install", "--python", py, "-r", "/kaggle/working/Wan2GP/requirements.txt"])
+run(["uv", "pip", "install", "--python", py, "torch==2.10.0", "torchvision", "--index-url", "https://download.pytorch.org/whl/cu130"])
 
 run(["uv", "pip", "install", "--python", py, "packaging"])
 
